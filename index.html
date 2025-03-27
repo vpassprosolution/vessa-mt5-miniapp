@@ -1,98 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MT5 Auto Copy Setup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VessaPro - MT5 Copy Setup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial; padding: 20px; background: #f7f7f7; }
-    h2 { color: #333; }
-    label { display: block; margin-top: 15px; }
-    input, select { width: 100%; padding: 8px; margin-top: 5px; }
-    .row { display: flex; gap: 10px; }
-    .row > div { flex: 1; }
-    button { margin-top: 20px; padding: 10px; width: 100%; background: #007bff; color: white; border: none; cursor: pointer; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Urbanist', sans-serif;
+      background-color: #000000;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      text-align: center;
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
+    }
+    .top-image {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #12b886;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+    button:hover {
+      background-color: #0ca678;
+    }
+    .logo {
+      width: 120px;
+      margin-top: 30px;
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
-  <h2>📥 Link Your MT5 Account</h2>
+  <div class="container">
+    <img class="top-image" src="VP Smart Signal.png" alt="Smart Money Moves">
 
-  <label>MT5 Broker Name:</label>
-  <input type="text" id="broker" placeholder="Ex: Exness, IC Markets">
+    <h2>🚀 Setup Your Auto-Copy Account</h2>
 
-  <label>Login ID:</label>
-  <input type="text" id="login" placeholder="Ex: 12345678">
+    <form method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_mt5">
+      <input type="number" name="user_id" placeholder="Telegram User ID" required>
+      <input type="text" name="broker" placeholder="MT5 Broker Server" required>
+      <input type="text" name="login" placeholder="MT5 Login ID" required>
+      <input type="password" name="password" placeholder="MT5 Password" required>
+      <button type="submit">✅ Save My Account</button>
+    </form>
 
-  <label>Password:</label>
-  <input type="password" id="password" placeholder="Your MT5 Password">
+    <form method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_risk">
+      <input type="number" name="user_id" placeholder="Telegram User ID" required>
+      <select name="method" required>
+        <option value="fixed">📏 Fixed Lot</option>
+        <option value="percent">📊 % of Balance</option>
+      </select>
+      <input type="text" name="value" placeholder="Risk Value (e.g. 0.05 or 3%)" required>
+      <button type="submit">⚙️ Save Risk Setting</button>
+    </form>
 
-  <label>Risk Mode:</label>
-  <select id="risk_mode" onchange="toggleRiskOptions()">
-    <option value="fixed">Fixed Lot Size</option>
-    <option value="percent">Risk % of Balance</option>
-  </select>
-
-  <div id="fixed_options">
-    <label>Fixed Lot Size:</label>
-    <select id="fixed_lot">
-      <option value="0.01">0.01</option>
-      <option value="0.05">0.05</option>
-      <option value="0.10">0.10</option>
-      <option value="0.20">0.20</option>
-      <option value="custom">Other (type manually)</option>
-    </select>
-    <input type="text" id="fixed_custom" placeholder="Enter custom lot" style="display:none;">
+    <img class="logo" src="Small-Font-With-Logo-White.png" alt="VessaPro Logo">
   </div>
-
-  <div id="percent_options" style="display:none;">
-    <label>Risk Percentage:</label>
-    <select id="percent_risk">
-      <option value="1">1%</option>
-      <option value="2">2%</option>
-      <option value="3">3%</option>
-      <option value="5">5%</option>
-      <option value="custom">Other (type manually)</option>
-    </select>
-    <input type="text" id="percent_custom" placeholder="Enter custom %" style="display:none;">
-  </div>
-
-  <button onclick="submitForm()">✅ Submit</button>
-
-  <script>
-    function toggleRiskOptions() {
-      const mode = document.getElementById("risk_mode").value;
-      document.getElementById("fixed_options").style.display = (mode === "fixed") ? "block" : "none";
-      document.getElementById("percent_options").style.display = (mode === "percent") ? "block" : "none";
-    }
-
-    document.getElementById("fixed_lot").addEventListener("change", function() {
-      document.getElementById("fixed_custom").style.display = (this.value === "custom") ? "block" : "none";
-    });
-
-    document.getElementById("percent_risk").addEventListener("change", function() {
-      document.getElementById("percent_custom").style.display = (this.value === "custom") ? "block" : "none";
-    });
-
-    function submitForm() {
-      const data = {
-        broker: document.getElementById("broker").value,
-        login: document.getElementById("login").value,
-        password: document.getElementById("password").value,
-        risk_mode: document.getElementById("risk_mode").value,
-        risk_value: getRiskValue()
-      };
-      alert(JSON.stringify(data, null, 2)); // 📦 Later send to backend
-    }
-
-    function getRiskValue() {
-      const mode = document.getElementById("risk_mode").value;
-      if (mode === "fixed") {
-        const selected = document.getElementById("fixed_lot").value;
-        return (selected === "custom") ? document.getElementById("fixed_custom").value : selected;
-      } else {
-        const selected = document.getElementById("percent_risk").value;
-        return (selected === "custom") ? document.getElementById("percent_custom").value : selected;
-      }
-    }
-  </script>
 </body>
 </html>
