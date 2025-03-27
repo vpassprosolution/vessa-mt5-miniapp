@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MT5 Auto Copy Setup</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f7f7f7; }
+    h2 { color: #333; }
+    label { display: block; margin-top: 15px; }
+    input, select { width: 100%; padding: 8px; margin-top: 5px; }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+    button { margin-top: 20px; padding: 10px; width: 100%; background: #007bff; color: white; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>📥 Link Your MT5 Account</h2>
+
+  <label>MT5 Broker Name:</label>
+  <input type="text" id="broker" placeholder="Ex: Exness, IC Markets">
+
+  <label>Login ID:</label>
+  <input type="text" id="login" placeholder="Ex: 12345678">
+
+  <label>Password:</label>
+  <input type="password" id="password" placeholder="Your MT5 Password">
+
+  <label>Risk Mode:</label>
+  <select id="risk_mode" onchange="toggleRiskOptions()">
+    <option value="fixed">Fixed Lot Size</option>
+    <option value="percent">Risk % of Balance</option>
+  </select>
+
+  <div id="fixed_options">
+    <label>Fixed Lot Size:</label>
+    <select id="fixed_lot">
+      <option value="0.01">0.01</option>
+      <option value="0.05">0.05</option>
+      <option value="0.10">0.10</option>
+      <option value="0.20">0.20</option>
+      <option value="custom">Other (type manually)</option>
+    </select>
+    <input type="text" id="fixed_custom" placeholder="Enter custom lot" style="display:none;">
+  </div>
+
+  <div id="percent_options" style="display:none;">
+    <label>Risk Percentage:</label>
+    <select id="percent_risk">
+      <option value="1">1%</option>
+      <option value="2">2%</option>
+      <option value="3">3%</option>
+      <option value="5">5%</option>
+      <option value="custom">Other (type manually)</option>
+    </select>
+    <input type="text" id="percent_custom" placeholder="Enter custom %" style="display:none;">
+  </div>
+
+  <button onclick="submitForm()">✅ Submit</button>
+
+  <script>
+    function toggleRiskOptions() {
+      const mode = document.getElementById("risk_mode").value;
+      document.getElementById("fixed_options").style.display = (mode === "fixed") ? "block" : "none";
+      document.getElementById("percent_options").style.display = (mode === "percent") ? "block" : "none";
+    }
+
+    document.getElementById("fixed_lot").addEventListener("change", function() {
+      document.getElementById("fixed_custom").style.display = (this.value === "custom") ? "block" : "none";
+    });
+
+    document.getElementById("percent_risk").addEventListener("change", function() {
+      document.getElementById("percent_custom").style.display = (this.value === "custom") ? "block" : "none";
+    });
+
+    function submitForm() {
+      const data = {
+        broker: document.getElementById("broker").value,
+        login: document.getElementById("login").value,
+        password: document.getElementById("password").value,
+        risk_mode: document.getElementById("risk_mode").value,
+        risk_value: getRiskValue()
+      };
+      alert(JSON.stringify(data, null, 2)); // 📦 Later send to backend
+    }
+
+    function getRiskValue() {
+      const mode = document.getElementById("risk_mode").value;
+      if (mode === "fixed") {
+        const selected = document.getElementById("fixed_lot").value;
+        return (selected === "custom") ? document.getElementById("fixed_custom").value : selected;
+      } else {
+        const selected = document.getElementById("percent_risk").value;
+        return (selected === "custom") ? document.getElementById("percent_custom").value : selected;
+      }
+    }
+  </script>
+</body>
+</html>
