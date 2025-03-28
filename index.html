@@ -89,6 +89,8 @@
   <div class="container" id="app"></div>
 
   <script>
+    const backend = "https://vessa-mt5-backend-production.up.railway.app";
+
     window.addEventListener("DOMContentLoaded", async function () {
       const tg = window.Telegram?.WebApp;
       const appDiv = document.getElementById("app");
@@ -102,15 +104,13 @@
 
       tg.ready();
       tg.expand();
-
       const userId = tg.initDataUnsafe.user.id.toString();
 
-      // Check MT5 connection status
       try {
-        const response = await fetch(`https://vessa-mt5-backend-production.up.railway.app/check_mt5_status?user_id=${userId}`);
-        const data = await response.json();
+        const res = await fetch(`${backend}/check_mt5_status?user_id=${userId}`);
+        const data = await res.json();
 
-        if (data.connected) {
+        if (data.status === "connected" && data.is_valid === true) {
           appDiv.innerHTML = `
             <div style="padding: 30px; text-align: center;">
               <h2 style="font-size: 22px;">✅ You're already connected!</h2>
@@ -122,6 +122,13 @@
               <img class="logo" src="Small-Font-With-Logo-White.png" alt="VessaPro Logo" />
             </div>
           `;
+        } else if (data.status === "DISCONNECTED" && data.is_valid === false) {
+          appDiv.innerHTML = `
+            <div style="color: red; text-align: center; padding: 30px;">
+              <h2>❌ Connection Failed</h2>
+              <p>Your MT5 login or broker may be incorrect.</p>
+              <button onclick="location.reload()">🔁 Try Again</button>
+            </div>`;
         } else {
           showForm(userId);
         }
@@ -135,16 +142,16 @@
         <img class="top-image" src="VP Smart Signal.png" alt="Smart Money Moves" />
         <h2>🚀 Setup Your Auto-Copy Account</h2>
 
-        <form id="mt5Form" method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_mt5">
-          <input type="hidden" name="user_id" id="user_id" value="${userId}" />
+        <form id="mt5Form" method="POST" action="${backend}/save_mt5">
+          <input type="hidden" name="user_id" value="${userId}" />
           <input type="text" name="broker" placeholder="MT5 Broker Server" required />
           <input type="text" name="login" placeholder="MT5 Login ID" required />
           <input type="password" name="password" placeholder="MT5 Password" required />
           <button type="submit">✅ Save My Account</button>
         </form>
 
-        <form id="riskForm" method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_risk">
-          <input type="hidden" name="user_id" id="user_id_risk" value="${userId}" />
+        <form id="riskForm" method="POST" action="${backend}/save_risk">
+          <input type="hidden" name="user_id" value="${userId}" />
           <select name="method" required>
             <option value="fixed">📏 Fixed Lot</option>
             <option value="percent">📊 % of Balance</option>
@@ -155,7 +162,6 @@
 
         <img class="logo" src="Small-Font-With-Logo-White.png" alt="VessaPro Logo" />
       `;
-
       handleForms();
     }
 
@@ -164,62 +170,49 @@
       const riskForm = document.getElementById("riskForm");
 
       const showLoading = (msg) => {
-        const btns = document.querySelectorAll("button");
-        btns.forEach(btn => {
+        document.querySelectorAll("button").forEach(btn => {
           btn.disabled = true;
           btn.innerHTML = `<span class="loader"></span> ${msg}`;
         });
       };
 
       const resetButtons = () => {
-        const btns = document.querySelectorAll("button");
-        btns[0].innerHTML = "✅ Save My Account";
-        btns[1].innerHTML = "⚙️ Save Risk Setting";
-        btns.forEach(btn => btn.disabled = false);
+        document.querySelectorAll("button")[0].innerHTML = "✅ Save My Account";
+        document.querySelectorAll("button")[1].innerHTML = "⚙️ Save Risk Setting";
+        document.querySelectorAll("button").forEach(btn => btn.disabled = false);
       };
 
-      const showSuccess = (message) => {
-        document.body.innerHTML = `
-          <div style="color: white; text-align: center; padding: 40px;">
-            <div style="font-size: 60px;">✅</div>
-            <h2 style="margin-top: 10px;">${message}</h2>
-          </div>`;
+      const showSuccess = (msg) => {
+        document.body.innerHTML = `<div style="color:white; text-align:center; padding:40px;">
+          <div style="font-size:60px;">✅</div>
+          <h2>${msg}</h2>
+        </div>`;
       };
 
-      mt5Form?.addEventListener("submit", async (e) => {
+      mt5Form.addEventListener("submit", async (e) => {
         e.preventDefault();
         showLoading("Saving...");
         const formData = new FormData(mt5Form);
-        const response = await fetch(mt5Form.action, { method: "POST", body: formData });
-        try {
-          const result = await response.json();
-          if (result?.success) {
-            showSuccess("MT5 Account Linked 🎉");
-          } else {
-            alert("❌ Failed: " + (result?.error || "Unknown error"));
-            resetButtons();
-          }
-        } catch {
-          alert("❌ Error saving MT5");
+        const res = await fetch(mt5Form.action, { method: "POST", body: formData });
+        const result = await res.json();
+        if (result?.success) {
+          showSuccess("MT5 Account Linked 🎉");
+        } else {
+          alert("❌ Failed: " + (result?.error || "Unknown error"));
           resetButtons();
         }
       });
 
-      riskForm?.addEventListener("submit", async (e) => {
+      riskForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         showLoading("Saving...");
         const formData = new FormData(riskForm);
-        const response = await fetch(riskForm.action, { method: "POST", body: formData });
-        try {
-          const result = await response.json();
-          if (result?.success) {
-            showSuccess("Risk Preference Saved ✅");
-          } else {
-            alert("❌ Failed: " + (result?.error || "Unknown error"));
-            resetButtons();
-          }
-        } catch {
-          alert("❌ Error saving risk");
+        const res = await fetch(riskForm.action, { method: "POST", body: formData });
+        const result = await res.json();
+        if (result?.success) {
+          showSuccess("Risk Preference Saved ✅");
+        } else {
+          alert("❌ Failed: " + (result?.error || "Unknown error"));
           resetButtons();
         }
       });
@@ -231,17 +224,10 @@
       if (!userId) return;
       const formData = new FormData();
       formData.append("user_id", userId);
-
-      const res = await fetch("https://vessa-mt5-backend-production.up.railway.app/delete_mt5", {
-        method: "POST",
-        body: formData
-      });
+      const res = await fetch(`${backend}/delete_mt5`, { method: "POST", body: formData });
       const result = await res.json();
-      if (result.success) {
-        location.reload();
-      } else {
-        alert("❌ Delete failed.");
-      }
+      if (result.success) location.reload();
+      else alert("❌ Delete failed.");
     }
   </script>
 </body>
