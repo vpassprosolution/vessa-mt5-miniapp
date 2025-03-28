@@ -95,73 +95,28 @@
       return await res.json();
     }
 
-    async function showFinalStatus(userId) {
-      let attempts = 0;
-      while (attempts < 6) {
-        const check = await checkStatus(userId);
-        if (check.status === "connected" && check.is_valid) {
-          showConnected();
-          return;
-        }
-        await delay(5000);
-        attempts++;
-      }
-      showRetry();
-    }
-
-    function showConnected() {
-      document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
-        <div style='font-size:60px;'>✅</div>
-        <h2>Account Connected!</h2>
-        <div class='small-btn'>
-          <button onclick='handleDelete()'>🗑️ Delete</button>
-          <button onclick='location.reload()'>🔄 Change</button>
-        </div>
-        <img class='logo' src='Small-Font-With-Logo-White.png' />
-      </div>`;
-    }
-
-    function showRetry() {
-      document.body.innerHTML = `<div style='color:red;text-align:center;padding:40px;'>
-        <div style='font-size:60px;'>⚠️</div>
-        <h2>Account saved but not connected yet.</h2>
-        <p>Please check your MT5 broker name or login credentials.</p>
-        <button onclick="location.reload()">🔁 Retry</button>
-      </div>`;
-    }
-
-    window.addEventListener("DOMContentLoaded", async function () {
-      const tg = window.Telegram?.WebApp;
-      const appDiv = document.getElementById("app");
-
-      if (!tg || !tg.initDataUnsafe?.user?.id) {
-        appDiv.innerHTML = `<div style="color: white; text-align: center; padding: 30px;">
-          <h1 style="font-size: 26px;">❌ Please open this form from the Telegram bot.</h1>
-        </div>`;
-        return;
-      }
-
-      tg.ready();
-      tg.expand();
-      const userId = tg.initDataUnsafe.user.id.toString();
-
-      try {
+    async function waitUntilConnected(userId) {
+      for (let i = 0; i < 10; i++) {
         const data = await checkStatus(userId);
-        if (data.status === "connected" && data.is_valid) {
-          showConnected();
-        } else if (data.status !== "connected" && data.is_valid) {
-          document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
-            <div class='loader'></div>
-            <h2>Saved. Waiting to connect...</h2>
-          </div>`;
-          await showFinalStatus(userId);
-        } else {
-          showForm(userId);
-        }
-      } catch {
-        appDiv.innerHTML = `<p style='color:red;'>⚠️ Failed to check MT5 status.</p>`;
+        if (data.status === 'connected' && data.is_valid) return true;
+        await delay(3000);
       }
-    });
+      return false;
+    }
+
+    function showConnectedUI() {
+      document.body.innerHTML = `
+        <div style='color:white;text-align:center;padding:40px;'>
+          <div style='font-size:60px;'>✅</div>
+          <h2>Account Connected!</h2>
+          <p>You can manage your settings below.</p>
+          <div class='small-btn'>
+            <button onclick='handleDelete()'>🗑️ Delete</button>
+            <button onclick='location.reload()'>🔄 Change</button>
+          </div>
+          <img class='logo' src='Small-Font-With-Logo-White.png' />
+        </div>`;
+    }
 
     function showForm(userId) {
       document.getElementById("app").innerHTML = `
@@ -194,51 +149,41 @@
       const mt5Form = document.getElementById("mt5Form");
       const riskForm = document.getElementById("riskForm");
 
-      const showLoading = (msg) => {
-        document.querySelectorAll("button").forEach(btn => {
-          btn.disabled = true;
-          btn.innerHTML = `<span class="loader"></span> ${msg}`;
-        });
-      };
-
-      const resetButtons = () => {
-        document.querySelectorAll("button")[0].innerHTML = "✅ Save My Account";
-        document.querySelectorAll("button")[1].innerHTML = "⚙️ Save Risk Setting";
-        document.querySelectorAll("button").forEach(btn => btn.disabled = false);
-      };
-
       mt5Form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        showLoading("Saving...");
         const formData = new FormData(mt5Form);
+        document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+          <div class='loader'></div>
+          <h2>Saving your account...</h2>
+        </div>`;
         const res = await fetch(`${backend}/save_mt5`, { method: "POST", body: formData });
         const result = await res.json();
         if (result.success) {
-          document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
-            <div class='loader'></div>
-            <h2>Account saved. Checking connection...</h2>
-          </div>`;
-          await showFinalStatus(formData.get("user_id"));
+          const connected = await waitUntilConnected(formData.get("user_id"));
+          if (connected) showConnectedUI();
+          else {
+            document.body.innerHTML = `<div style='color:red;text-align:center;padding:40px;'>
+              <div style='font-size:60px;'>⚠️</div>
+              <h2>Account saved but not connected yet.</h2>
+              <p>Check your login or broker details.</p>
+              <button onclick="location.reload()">🔁 Retry</button>
+            </div>`;
+          }
         } else {
-          alert("❌ Failed: " + (result?.error || "Unknown error"));
-          resetButtons();
+          alert("❌ Save failed: " + (result?.error || "Unknown error"));
+          location.reload();
         }
       });
 
       riskForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        showLoading("Saving...");
         const formData = new FormData(riskForm);
         const res = await fetch(`${backend}/save_risk`, { method: "POST", body: formData });
         const result = await res.json();
         if (result.success) {
-          document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
-            <div style='font-size:60px;'>✅</div>
-            <h2>Risk Saved!</h2>
-          </div>`;
+          alert("✅ Risk setting saved!");
         } else {
-          alert("❌ Failed: " + (result?.error || "Unknown error"));
-          resetButtons();
+          alert("❌ Risk setting failed: " + (result?.error || "Unknown error"));
         }
       });
     }
@@ -254,6 +199,33 @@
       if (result.success) location.reload();
       else alert("❌ Delete failed.");
     }
+
+    window.addEventListener("DOMContentLoaded", async function () {
+      const tg = window.Telegram?.WebApp;
+      const appDiv = document.getElementById("app");
+
+      if (!tg || !tg.initDataUnsafe?.user?.id) {
+        appDiv.innerHTML = `<div style="color: white; text-align: center; padding: 30px;">
+          <h1 style="font-size: 26px;">❌ Please open this from Telegram.</h1>
+        </div>`;
+        return;
+      }
+
+      tg.ready();
+      tg.expand();
+      const userId = tg.initDataUnsafe.user.id.toString();
+
+      try {
+        const data = await checkStatus(userId);
+        if (data.status === 'connected' && data.is_valid) {
+          showConnectedUI();
+        } else {
+          showForm(userId);
+        }
+      } catch {
+        appDiv.innerHTML = `<p style='color:red;'>⚠️ Failed to check MT5 status.</p>`;
+      }
+    });
   </script>
 </body>
 </html>
