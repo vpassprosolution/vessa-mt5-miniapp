@@ -85,144 +85,175 @@
   </style>
 </head>
 <body>
-<div class="container" id="app"></div>
-<script>
-  const backend = "https://vessa-mt5-backend-production.up.railway.app";
-  const delay = ms => new Promise(res => setTimeout(res, ms));
+  <div class="container" id="app"></div>
+  <script>
+    const backend = "https://vessa-mt5-backend-production.up.railway.app";
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-  async function checkStatus(userId) {
-    const res = await fetch(`${backend}/check_mt5_status?user_id=${userId}`);
-    return await res.json();
-  }
-
-  async function waitForConnection(userId) {
-    let attempt = 0;
-    while (attempt < 6) {
-      const res = await checkStatus(userId);
-      if (res.status === "connected") return true;
-      await delay(5000);
-      attempt++;
+    async function checkStatus(userId) {
+      const res = await fetch(`${backend}/check_mt5_status?user_id=${userId}`);
+      return await res.json();
     }
-    return false;
-  }
 
-  async function init() {
-    const tg = window.Telegram?.WebApp;
-    const app = document.getElementById("app");
-    if (!tg || !tg.initDataUnsafe?.user?.id) {
-      app.innerHTML = `<p style='color:red;text-align:center;'>❌ Please open this from Telegram bot</p>`;
-      return;
-    }
-    const userId = tg.initDataUnsafe.user.id.toString();
-    tg.ready();
-    tg.expand();
-
-    const res = await checkStatus(userId);
-    if (res.status === "connected" && res.is_valid) {
-      app.innerHTML = `
-        <div style='padding:30px;text-align:center;'>
-          <h2 style='font-size:22px;'>✅ You're already connected!</h2>
-          <p>Manage your account below:</p>
-          <div class='small-btn'>
-            <button onclick='handleDelete()'>🗑️ Delete</button>
-            <button onclick='location.reload()'>🔄 Change</button>
-          </div>
-          <img class='logo' src='Small-Font-With-Logo-White.png' />
-        </div>`;
-    } else if (res.metaapi_account_id) {
-      app.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
-        <div class='loader'></div>
-        <h2>Saved. Waiting to connect...</h2>
-      </div>`;
-      const connected = await waitForConnection(userId);
-      if (connected) location.reload();
-      else {
-        app.innerHTML = `<div style='color:red;text-align:center;padding:40px;'>
-          <div style='font-size:60px;'>⚠️</div>
-          <h2>Account saved but not connected yet.</h2>
-          <p>Make sure your MT5 login and broker name are correct.</p>
-          <button onclick="location.reload()">🔁 Retry</button>
-        </div>`;
+    async function showFinalStatus(userId) {
+      let attempts = 0;
+      while (attempts < 6) {
+        const check = await checkStatus(userId);
+        if (check.status === "connected" && check.is_valid) {
+          showConnected();
+          return;
+        }
+        await delay(5000);
+        attempts++;
       }
-    } else {
-      showForm(userId);
+      showRetry();
     }
-  }
 
-  function showForm(userId) {
-    document.getElementById("app").innerHTML = `
-      <img class="top-image" src="VP Smart Signal.png" />
-      <h2>🚀 Setup Your Auto-Copy Account</h2>
-      <form id="mt5Form">
-        <input type="hidden" name="user_id" value="${userId}" />
-        <input type="text" name="broker" placeholder="MT5 Broker Server" required />
-        <input type="text" name="login" placeholder="MT5 Login ID" required />
-        <input type="password" name="password" placeholder="MT5 Password" required />
-        <button type="submit">✅ Save My Account</button>
-      </form>
-      <form id="riskForm">
-        <input type="hidden" name="user_id" value="${userId}" />
-        <select name="method" required>
-          <option value="fixed">📏 Fixed Lot</option>
-          <option value="percent">📊 % of Balance</option>
-        </select>
-        <input type="text" name="value" placeholder="Risk Value (e.g. 0.05 or 3%)" required />
-        <button type="submit">⚙️ Save Risk Setting</button>
-      </form>
-      <img class="logo" src="Small-Font-With-Logo-White.png" />
-    `;
-    setupForms();
-  }
+    function showConnected() {
+      document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+        <div style='font-size:60px;'>✅</div>
+        <h2>Account Connected!</h2>
+        <div class='small-btn'>
+          <button onclick='handleDelete()'>🗑️ Delete</button>
+          <button onclick='location.reload()'>🔄 Change</button>
+        </div>
+        <img class='logo' src='Small-Font-With-Logo-White.png' />
+      </div>`;
+    }
 
-  function setupForms() {
-    const mt5Form = document.getElementById("mt5Form");
-    const riskForm = document.getElementById("riskForm");
+    function showRetry() {
+      document.body.innerHTML = `<div style='color:red;text-align:center;padding:40px;'>
+        <div style='font-size:60px;'>⚠️</div>
+        <h2>Account saved but not connected yet.</h2>
+        <p>Please check your MT5 broker name or login credentials.</p>
+        <button onclick="location.reload()">🔁 Retry</button>
+      </div>`;
+    }
 
-    const disableButtons = (msg) => {
-      document.querySelectorAll("button").forEach(btn => {
-        btn.disabled = true;
-        btn.innerHTML = `<span class='loader'></span> ${msg}`;
+    window.addEventListener("DOMContentLoaded", async function () {
+      const tg = window.Telegram?.WebApp;
+      const appDiv = document.getElementById("app");
+
+      if (!tg || !tg.initDataUnsafe?.user?.id) {
+        appDiv.innerHTML = `<div style="color: white; text-align: center; padding: 30px;">
+          <h1 style="font-size: 26px;">❌ Please open this form from the Telegram bot.</h1>
+        </div>`;
+        return;
+      }
+
+      tg.ready();
+      tg.expand();
+      const userId = tg.initDataUnsafe.user.id.toString();
+
+      try {
+        const data = await checkStatus(userId);
+        if (data.status === "connected" && data.is_valid) {
+          showConnected();
+        } else if (data.status !== "connected" && data.is_valid) {
+          document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+            <div class='loader'></div>
+            <h2>Saved. Waiting to connect...</h2>
+          </div>`;
+          await showFinalStatus(userId);
+        } else {
+          showForm(userId);
+        }
+      } catch {
+        appDiv.innerHTML = `<p style='color:red;'>⚠️ Failed to check MT5 status.</p>`;
+      }
+    });
+
+    function showForm(userId) {
+      document.getElementById("app").innerHTML = `
+        <img class="top-image" src="VP Smart Signal.png" />
+        <h2>🚀 Setup Your Auto-Copy Account</h2>
+        <form id="mt5Form">
+          <input type="hidden" name="user_id" value="${userId}" />
+          <input type="text" name="broker" placeholder="MT5 Broker Server" required />
+          <input type="text" name="login" placeholder="MT5 Login ID" required />
+          <input type="password" name="password" placeholder="MT5 Password" required />
+          <button type="submit">✅ Save My Account</button>
+        </form>
+
+        <form id="riskForm">
+          <input type="hidden" name="user_id" value="${userId}" />
+          <select name="method" required>
+            <option value="fixed">📏 Fixed Lot</option>
+            <option value="percent">📊 % of Balance</option>
+          </select>
+          <input type="text" name="value" placeholder="Risk Value (e.g. 0.05 or 3%)" required />
+          <button type="submit">⚙️ Save Risk Setting</button>
+        </form>
+
+        <img class="logo" src="Small-Font-With-Logo-White.png" />
+      `;
+      handleForms();
+    }
+
+    function handleForms() {
+      const mt5Form = document.getElementById("mt5Form");
+      const riskForm = document.getElementById("riskForm");
+
+      const showLoading = (msg) => {
+        document.querySelectorAll("button").forEach(btn => {
+          btn.disabled = true;
+          btn.innerHTML = `<span class="loader"></span> ${msg}`;
+        });
+      };
+
+      const resetButtons = () => {
+        document.querySelectorAll("button")[0].innerHTML = "✅ Save My Account";
+        document.querySelectorAll("button")[1].innerHTML = "⚙️ Save Risk Setting";
+        document.querySelectorAll("button").forEach(btn => btn.disabled = false);
+      };
+
+      mt5Form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        showLoading("Saving...");
+        const formData = new FormData(mt5Form);
+        const res = await fetch(`${backend}/save_mt5`, { method: "POST", body: formData });
+        const result = await res.json();
+        if (result.success) {
+          document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+            <div class='loader'></div>
+            <h2>Account saved. Checking connection...</h2>
+          </div>`;
+          await showFinalStatus(formData.get("user_id"));
+        } else {
+          alert("❌ Failed: " + (result?.error || "Unknown error"));
+          resetButtons();
+        }
       });
-    };
 
-    mt5Form.onsubmit = async (e) => {
-      e.preventDefault();
-      disableButtons("Saving...");
-      const formData = new FormData(mt5Form);
-      const res = await fetch(`${backend}/save_mt5`, { method: "POST", body: formData });
+      riskForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        showLoading("Saving...");
+        const formData = new FormData(riskForm);
+        const res = await fetch(`${backend}/save_risk`, { method: "POST", body: formData });
+        const result = await res.json();
+        if (result.success) {
+          document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+            <div style='font-size:60px;'>✅</div>
+            <h2>Risk Saved!</h2>
+          </div>`;
+        } else {
+          alert("❌ Failed: " + (result?.error || "Unknown error"));
+          resetButtons();
+        }
+      });
+    }
+
+    async function handleDelete() {
+      const tg = window.Telegram?.WebApp;
+      const userId = tg?.initDataUnsafe?.user?.id;
+      if (!userId) return;
+      const formData = new FormData();
+      formData.append("user_id", userId);
+      const res = await fetch(`${backend}/delete_mt5`, { method: "POST", body: formData });
       const result = await res.json();
       if (result.success) location.reload();
-      else alert("❌ Failed to save: " + (result.error || "Unknown"));
-    };
-
-    riskForm.onsubmit = async (e) => {
-      e.preventDefault();
-      disableButtons("Saving...");
-      const formData = new FormData(riskForm);
-      const res = await fetch(`${backend}/save_risk`, { method: "POST", body: formData });
-      const result = await res.json();
-      if (result.success) {
-        document.body.innerHTML = `<div style='text-align:center;padding:40px;color:white;'>
-          <div style='font-size:60px;'>✅</div>
-          <h2>Risk Saved!</h2>
-        </div>`;
-      } else alert("❌ Failed to save risk: " + (result.error || "Unknown"));
-    };
-  }
-
-  async function handleDelete() {
-    const tg = window.Telegram?.WebApp;
-    const userId = tg?.initDataUnsafe?.user?.id;
-    if (!userId) return;
-    const formData = new FormData();
-    formData.append("user_id", userId);
-    const res = await fetch(`${backend}/delete_mt5`, { method: "POST", body: formData });
-    const result = await res.json();
-    if (result.success) location.reload();
-    else alert("❌ Delete failed.");
-  }
-
-  init();
-</script>
+      else alert("❌ Delete failed.");
+    }
+  </script>
 </body>
 </html>
