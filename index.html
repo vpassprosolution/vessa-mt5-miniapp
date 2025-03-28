@@ -6,14 +6,13 @@
   <title>VessaPro - MT5 Copy Setup</title>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet"/>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
   <style>
     body {
       margin: 0;
       padding: 0;
       font-family: 'Urbanist', sans-serif;
-      background-color: #000000;
-      color: #ffffff;
+      background-color: #000;
+      color: #fff;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -87,9 +86,44 @@
 </head>
 <body>
   <div class="container" id="app"></div>
-
   <script>
     const backend = "https://vessa-mt5-backend-production.up.railway.app";
+
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+    async function checkStatus(userId) {
+      const res = await fetch(`${backend}/check_mt5_status?user_id=${userId}`);
+      const data = await res.json();
+      return data;
+    }
+
+    async function showFinalStatus(userId) {
+      let attempts = 0;
+      let status = null;
+      let valid = false;
+      while (attempts < 6) {
+        const check = await checkStatus(userId);
+        status = check.status;
+        valid = check.is_valid;
+        if (status === "connected") break;
+        await delay(5000);
+        attempts++;
+      }
+
+      if (status === "connected") {
+        document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+          <div style='font-size:60px;'>✅</div>
+          <h2>Account Connected!</h2>
+        </div>`;
+      } else {
+        document.body.innerHTML = `<div style='color:red;text-align:center;padding:40px;'>
+          <div style='font-size:60px;'>⚠️</div>
+          <h2>Account saved but not connected yet.</h2>
+          <p>Make sure your MT5 login and broker name are correct.</p>
+          <button onclick="location.reload()">🔁 Retry</button>
+        </div>`;
+      }
+    }
 
     window.addEventListener("DOMContentLoaded", async function () {
       const tg = window.Telegram?.WebApp;
@@ -107,42 +141,30 @@
       const userId = tg.initDataUnsafe.user.id.toString();
 
       try {
-        const res = await fetch(`${backend}/check_mt5_status?user_id=${userId}`);
-        const data = await res.json();
-
+        const data = await checkStatus(userId);
         if (data.status === "connected" && data.is_valid === true) {
-          appDiv.innerHTML = `
-            <div style="padding: 30px; text-align: center;">
-              <h2 style="font-size: 22px;">✅ You're already connected!</h2>
-              <p style="margin-top: 10px;">You can manage your account below.</p>
-              <div class="small-btn">
-                <button onclick="handleDelete()">🗑️ Delete</button>
-                <button onclick="location.reload()">🔄 Change</button>
-              </div>
-              <img class="logo" src="Small-Font-With-Logo-White.png" alt="VessaPro Logo" />
+          appDiv.innerHTML = `<div style='padding:30px;text-align:center;'>
+            <h2 style='font-size:22px;'>✅ You're already connected!</h2>
+            <p>Manage your account below:</p>
+            <div class='small-btn'>
+              <button onclick='handleDelete()'>🗑️ Delete</button>
+              <button onclick='location.reload()'>🔄 Change</button>
             </div>
-          `;
-        } else if (data.status === "DISCONNECTED" && data.is_valid === false) {
-          appDiv.innerHTML = `
-            <div style="color: red; text-align: center; padding: 30px;">
-              <h2>❌ Connection Failed</h2>
-              <p>Your MT5 login or broker may be incorrect.</p>
-              <button onclick="location.reload()">🔁 Try Again</button>
-            </div>`;
+            <img class='logo' src='Small-Font-With-Logo-White.png' />
+          </div>`;
         } else {
           showForm(userId);
         }
-      } catch (err) {
-        appDiv.innerHTML = `<p style="color:red;">⚠️ Failed to check status.</p>`;
+      } catch {
+        appDiv.innerHTML = `<p style='color:red;'>⚠️ Failed to check MT5 status.</p>`;
       }
     });
 
     function showForm(userId) {
       document.getElementById("app").innerHTML = `
-        <img class="top-image" src="VP Smart Signal.png" alt="Smart Money Moves" />
+        <img class="top-image" src="VP Smart Signal.png" />
         <h2>🚀 Setup Your Auto-Copy Account</h2>
-
-        <form id="mt5Form" method="POST" action="${backend}/save_mt5">
+        <form id="mt5Form">
           <input type="hidden" name="user_id" value="${userId}" />
           <input type="text" name="broker" placeholder="MT5 Broker Server" required />
           <input type="text" name="login" placeholder="MT5 Login ID" required />
@@ -150,7 +172,7 @@
           <button type="submit">✅ Save My Account</button>
         </form>
 
-        <form id="riskForm" method="POST" action="${backend}/save_risk">
+        <form id="riskForm">
           <input type="hidden" name="user_id" value="${userId}" />
           <select name="method" required>
             <option value="fixed">📏 Fixed Lot</option>
@@ -160,7 +182,7 @@
           <button type="submit">⚙️ Save Risk Setting</button>
         </form>
 
-        <img class="logo" src="Small-Font-With-Logo-White.png" alt="VessaPro Logo" />
+        <img class="logo" src="Small-Font-With-Logo-White.png" />
       `;
       handleForms();
     }
@@ -182,21 +204,18 @@
         document.querySelectorAll("button").forEach(btn => btn.disabled = false);
       };
 
-      const showSuccess = (msg) => {
-        document.body.innerHTML = `<div style="color:white; text-align:center; padding:40px;">
-          <div style="font-size:60px;">✅</div>
-          <h2>${msg}</h2>
-        </div>`;
-      };
-
       mt5Form.addEventListener("submit", async (e) => {
         e.preventDefault();
         showLoading("Saving...");
         const formData = new FormData(mt5Form);
-        const res = await fetch(mt5Form.action, { method: "POST", body: formData });
+        const res = await fetch(`${backend}/save_mt5`, { method: "POST", body: formData });
         const result = await res.json();
-        if (result?.success) {
-          showSuccess("MT5 Account Linked 🎉");
+        if (result.success) {
+          document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+            <div class='loader'></div>
+            <h2>Account saved. Checking connection...</h2>
+          </div>`;
+          await showFinalStatus(formData.get("user_id"));
         } else {
           alert("❌ Failed: " + (result?.error || "Unknown error"));
           resetButtons();
@@ -207,10 +226,13 @@
         e.preventDefault();
         showLoading("Saving...");
         const formData = new FormData(riskForm);
-        const res = await fetch(riskForm.action, { method: "POST", body: formData });
+        const res = await fetch(`${backend}/save_risk`, { method: "POST", body: formData });
         const result = await res.json();
-        if (result?.success) {
-          showSuccess("Risk Preference Saved ✅");
+        if (result.success) {
+          document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+            <div style='font-size:60px;'>✅</div>
+            <h2>Risk Saved!</h2>
+          </div>`;
         } else {
           alert("❌ Failed: " + (result?.error || "Unknown error"));
           resetButtons();
