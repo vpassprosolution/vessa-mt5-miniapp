@@ -89,27 +89,25 @@
   </div>
 
   <script>
-    window.addEventListener("DOMContentLoaded", function () {
-      // 🔒 Disable all buttons until user ID is detected
-      document.querySelectorAll("button").forEach(btn => btn.disabled = true);
+  window.addEventListener("DOMContentLoaded", function () {
+    const buttons = document.querySelectorAll("button");
+    buttons.forEach(btn => btn.disabled = true); // 🔒 Disable all buttons first
 
-      if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp;
-        const userId = tg.initDataUnsafe?.user?.id;
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      const userId = tg.initDataUnsafe?.user?.id;
 
-        if (userId) {
-          document.getElementById("user_id").value = userId;
-          document.getElementById("user_id_risk").value = userId;
+      if (userId) {
+        document.getElementById("user_id").value = userId;
+        document.getElementById("user_id_risk").value = userId;
 
-          // ✅ Enable buttons after user ID is inserted
-          document.querySelectorAll("button").forEach(btn => btn.disabled = false);
-        } else {
-          alert("❌ Failed to detect Telegram user ID. Please open this form from inside Telegram.");
-        }
+        buttons.forEach(btn => btn.disabled = false); // ✅ Enable buttons
       } else {
-        alert("❌ Telegram WebApp not available. Please open from Telegram bot.");
+        alert("❌ Failed to detect Telegram user ID. Please open from Telegram.");
       }
-    });
-  </script>
-</body>
-</html>
+    } else {
+      alert("❌ Telegram WebApp not available. Please open from Telegram bot.");
+    }
+  });
+</script>
+
