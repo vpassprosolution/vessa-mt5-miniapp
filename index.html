@@ -61,16 +61,16 @@
 
     <h2>🚀 Setup Your Auto-Copy Account</h2>
 
-    <form method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_mt5">
-      <input type="number" name="user_id" placeholder="Telegram User ID" required>
+    <form id="mt5Form" method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_mt5">
+      <input type="hidden" name="user_id" id="user_id">
       <input type="text" name="broker" placeholder="MT5 Broker Server" required>
       <input type="text" name="login" placeholder="MT5 Login ID" required>
       <input type="password" name="password" placeholder="MT5 Password" required>
       <button type="submit">✅ Save My Account</button>
     </form>
 
-    <form method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_risk">
-      <input type="number" name="user_id" placeholder="Telegram User ID" required>
+    <form id="riskForm" method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_risk">
+      <input type="hidden" name="user_id" id="user_id_risk">
       <select name="method" required>
         <option value="fixed">📏 Fixed Lot</option>
         <option value="percent">📊 % of Balance</option>
@@ -81,5 +81,20 @@
 
     <img class="logo" src="Small-Font-With-Logo-White.png" alt="VessaPro Logo">
   </div>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      const tg = window.Telegram.WebApp;
+      const initData = tg.initDataUnsafe;
+
+      if (initData && initData.user && initData.user.id) {
+        const userId = initData.user.id;
+        document.getElementById("user_id").value = userId;
+        document.getElementById("user_id_risk").value = userId;
+      } else {
+        alert("❌ Failed to detect Telegram user ID. Please open this form from the Telegram bot.");
+      }
+    });
+  </script>
 </body>
 </html>
