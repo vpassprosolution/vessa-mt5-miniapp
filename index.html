@@ -90,10 +90,10 @@
 
   <script>
 window.addEventListener("DOMContentLoaded", function () {
-  const tg = window.Telegram.WebApp;
+  const tg = window.Telegram?.WebApp;
 
-  // ❌ If Telegram not detected
-  if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user || !tg.initDataUnsafe.user.id) {
+  // ❌ Show error if not inside Telegram
+  if (!tg || !tg.initDataUnsafe?.user?.id) {
     document.body.innerHTML = `
       <div style="color: white; text-align: center; padding: 30px;">
         <h1 style="font-size: 26px;">❌ Please open this form from the Telegram bot.</h1>
@@ -101,65 +101,70 @@ window.addEventListener("DOMContentLoaded", function () {
     return;
   }
 
-  tg.ready();     // ✅ Mark the WebApp as ready
-  tg.expand();    // ✅ Expand to fullscreen
+  tg.ready();
+  tg.expand();
 
-  const userId = tg.initDataUnsafe.user.id;
+  // ✅ Get Telegram user ID
+  const userId = tg.initDataUnsafe.user.id?.toString();
+  if (!userId || userId === "") {
+    alert("❌ Telegram user ID not detected. Please reopen from bot.");
+    return;
+  }
 
-  // ✅ Fill user_id hidden fields
-  const userIdInput1 = document.getElementById("user_id");
-  const userIdInput2 = document.getElementById("user_id_risk");
+  // ✅ Set user ID into both hidden inputs
+  const userInput1 = document.getElementById("user_id");
+  const userInput2 = document.getElementById("user_id_risk");
 
-  if (userIdInput1) userIdInput1.value = userId;
-  if (userIdInput2) userIdInput2.value = userId;
+  if (userInput1) userInput1.value = userId;
+  if (userInput2) userInput2.value = userId;
 
+  // ✅ Forms
   const mt5Form = document.getElementById("mt5Form");
   const riskForm = document.getElementById("riskForm");
-  const mt5Button = mt5Form?.querySelector("button");
-  const riskButton = riskForm?.querySelector("button");
 
-  if (mt5Button) mt5Button.disabled = false;
-  if (riskButton) riskButton.disabled = false;
-
-  // ✅ MT5 Form Submit
-  mt5Form?.addEventListener("submit", async function (e) {
+  // ✅ Submit MT5 Form
+  mt5Form?.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const formData = new FormData(mt5Form);
-    try {
-      const response = await fetch(mt5Form.action, {
-        method: "POST",
-        body: formData
-      });
-      const result = await response.json();
-      if (result.success) {
-        alert("✅ MT5 details saved successfully!");
-        mt5Form.reset();
-      } else {
-        alert("❌ Failed to save MT5 details.");
-      }
-    } catch {
-      alert("❌ Network error while saving MT5 details.");
+    if (!formData.get("user_id")) {
+      alert("❌ MT5 user_id is empty!");
+      return;
+    }
+
+    const response = await fetch(mt5Form.action, {
+      method: "POST",
+      body: formData,
+    });
+    const result = await response.json();
+    if (result.success) {
+      alert("✅ MT5 details saved!");
+      mt5Form.reset();
+    } else {
+      alert("❌ Failed to save MT5: " + (result.error || ""));
     }
   });
 
-  // ✅ Risk Form Submit
-  riskForm?.addEventListener("submit", async function (e) {
+  // ✅ Submit Risk Form
+  riskForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const formData = new FormData(riskForm);
-    try {
-      const response = await fetch(riskForm.action, {
-        method: "POST",
-        body: formData
-      });
-      const result = await response.json();
-      if (result.success) {
-        alert("✅ Risk settings saved successfully!");
-        riskForm.reset();
-      } else {
-        alert("❌ Failed to save risk settings.");
-      }
-    } catch {
-      alert("❌ Network error while saving risk settings.");
+    if (!formData.get("user_id")) {
+      alert("❌ Risk user_id is empty!");
+      return;
+    }
+
+    const response = await fetch(riskForm.action, {
+      method: "POST",
+      body: formData,
+    });
+    const result = await response.json();
+    if (result.success) {
+      alert("✅ Risk settings saved!");
+      riskForm.reset();
+    } else {
+      alert("❌ Failed to save risk: " + (result.error || ""));
     }
   });
 });
