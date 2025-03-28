@@ -91,78 +91,86 @@
   </div>
 
   <script>
-    window.addEventListener("DOMContentLoaded", function () {
-      const tg = window.Telegram?.WebApp;
+  window.addEventListener("DOMContentLoaded", function () {
+    const tg = window.Telegram?.WebApp;
 
-      // ❌ Show error if not inside Telegram
-      if (!tg || !tg.initDataUnsafe?.user?.id) {
-        document.body.innerHTML = `
-          <div style="color: white; text-align: center; padding: 30px;">
-            <h1 style="font-size: 26px;">❌ Please open this form from the Telegram bot.</h1>
-          </div>`;
+    if (!tg || !tg.initDataUnsafe?.user?.id) {
+      document.body.innerHTML = `
+        <div style="color: white; text-align: center; padding: 30px;">
+          <h1 style="font-size: 26px;">❌ Please open this form from the Telegram bot.</h1>
+        </div>`;
+      return;
+    }
+
+    tg.ready();
+    tg.expand();
+
+    const userId = tg.initDataUnsafe.user.id?.toString();
+    if (!userId) {
+      alert("❌ Telegram user ID not detected. Please reopen from bot.");
+      return;
+    }
+
+    document.getElementById("user_id").value = userId;
+    document.getElementById("user_id_risk").value = userId;
+
+    const mt5Form = document.getElementById("mt5Form");
+    const riskForm = document.getElementById("riskForm");
+
+    // ✅ Submit MT5 Form
+    mt5Form?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(mt5Form);
+      if (!formData.get("user_id")) {
+        alert("❌ MT5 user_id is empty!");
         return;
       }
 
-      tg.ready();
-      tg.expand();
-
-      // ✅ Get Telegram user ID
-      const userId = tg.initDataUnsafe.user.id?.toString();
-      if (!userId || userId === "") {
-        alert("❌ Telegram user ID not detected. Please reopen from bot.");
-        return;
-      }
-
-      // ✅ Set user ID into both hidden inputs
-      document.getElementById("user_id").value = userId;
-      document.getElementById("user_id_risk").value = userId;
-
-      // ✅ Forms
-      const mt5Form = document.getElementById("mt5Form");
-      const riskForm = document.getElementById("riskForm");
-
-      // ✅ Submit MT5 Form
-      mt5Form?.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const formData = new FormData(mt5Form);
-        if (!formData.get("user_id")) {
-          alert("❌ MT5 user_id is empty!");
-          return;
-        }
+      try {
         const response = await fetch(mt5Form.action, {
           method: "POST",
           body: formData,
         });
+
         const result = await response.json();
+
         if (result.success) {
-          alert("✅ MT5 details saved!");
+          alert("✅ MT5 details saved successfully!");
           mt5Form.reset();
         } else {
-          alert("❌ Failed to save MT5: " + (result.error || ""));
+          alert("❌ Failed to save MT5: " + (result.error || "Unknown error"));
         }
-      });
+      } catch (error) {
+        alert("❌ Something went wrong while saving MT5: " + error.message);
+      }
+    });
 
-      // ✅ Submit Risk Form
-      riskForm?.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const formData = new FormData(riskForm);
-        if (!formData.get("user_id")) {
-          alert("❌ Risk user_id is empty!");
-          return;
-        }
+    // ✅ Submit Risk Form
+    riskForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(riskForm);
+      if (!formData.get("user_id")) {
+        alert("❌ Risk user_id is empty!");
+        return;
+      }
+
+      try {
         const response = await fetch(riskForm.action, {
           method: "POST",
           body: formData,
         });
+
         const result = await response.json();
+
         if (result.success) {
           alert("✅ Risk settings saved!");
           riskForm.reset();
         } else {
-          alert("❌ Failed to save risk: " + (result.error || ""));
+          alert("❌ Failed to save risk: " + (result.error || "Unknown error"));
         }
-      });
+      } catch (error) {
+        alert("❌ Something went wrong while saving risk: " + error.message);
+      }
     });
-  </script>
-</body>
-</html>
+  });
+</script>
