@@ -141,23 +141,33 @@
       const userId = tg.initDataUnsafe.user.id.toString();
 
       try {
-        const data = await checkStatus(userId);
-        if (data.status === "connected" && data.is_valid === true) {
-          appDiv.innerHTML = `<div style='padding:30px;text-align:center;'>
-            <h2 style='font-size:22px;'>✅ You're already connected!</h2>
-            <p>Manage your account below:</p>
-            <div class='small-btn'>
-              <button onclick='handleDelete()'>🗑️ Delete</button>
-              <button onclick='location.reload()'>🔄 Change</button>
-            </div>
-            <img class='logo' src='Small-Font-With-Logo-White.png' />
-          </div>`;
-        } else {
-          showForm(userId);
-        }
-      } catch {
-        appDiv.innerHTML = `<p style='color:red;'>⚠️ Failed to check MT5 status.</p>`;
-      }
+  const data = await checkStatus(userId);
+  if (data.is_valid === true) {
+    if (data.status === "connected") {
+      appDiv.innerHTML = `<div style='padding:30px;text-align:center;'>
+        <h2 style='font-size:22px;'>✅ You're already connected!</h2>
+        <p>Manage your account below:</p>
+        <div class='small-btn'>
+          <button onclick='handleDelete()'>🗑️ Delete</button>
+          <button onclick='location.reload()'>🔄 Change</button>
+        </div>
+        <img class='logo' src='Small-Font-With-Logo-White.png' />
+      </div>`;
+    } else {
+      // Show loading and retry checking
+      appDiv.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+        <div class='loader'></div>
+        <h2>Saved. Waiting to connect...</h2>
+      </div>`;
+      await showFinalStatus(userId);
+    }
+  } else {
+    showForm(userId); // no valid account saved yet
+  }
+} catch {
+  appDiv.innerHTML = `<p style='color:red;'>⚠️ Failed to check MT5 status.</p>`;
+}
+
     });
 
     function showForm(userId) {
