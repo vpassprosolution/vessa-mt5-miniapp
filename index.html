@@ -1,102 +1,231 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VessaPro - MT5 Copy Setup</title>
-  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet"/>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
-    .box { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 0 10px #ccc; }
-    .visible { display: block; }
-    input, select, button { margin: 10px 0; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
-    button { background: #0088cc; color: white; border: none; font-weight: bold; }
-    #logo { max-width: 150px; margin-bottom: 20px; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Urbanist', sans-serif;
+      background-color: #000;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      text-align: center;
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
+    }
+    .top-image {
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #12b886;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+    button:disabled {
+      background-color: #666;
+      cursor: not-allowed;
+    }
+    button:hover {
+      background-color: #0ca678;
+    }
+    .logo {
+      width: 120px;
+      margin-top: 30px;
+      opacity: 0.8;
+    }
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid #fff;
+      border-top: 3px solid #12b886;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .small-btn {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .small-btn button {
+      width: 45%;
+      font-size: 14px;
+      padding: 8px 10px;
+    }
   </style>
 </head>
 <body>
-
-  <img id="logo" src="https://i.imgur.com/VfpE9AT.png" alt="Logo">
-
-  <!-- Connection Status -->
-  <div id="connectedBox" class="box">
-    <h3>✅ Connected to MetaTrader 5</h3>
-    <p><strong>Broker:</strong> <span id="brokerInfo"></span></p>
-    <p><strong>Login:</strong> <span id="loginInfo"></span></p>
-    <button onclick="showDeleteForm()">❌ Delete / Change Account</button>
-    <button onclick="showRiskForm()">📊 Set Risk Preference</button>
-  </div>
-
-  <!-- Connection Form -->
-  <div id="connectBox" class="box visible">
-    <h3>🔐 Link Your MT5 Account</h3>
-    <input id="broker" placeholder="Broker Name">
-    <input id="login" placeholder="Login Number">
-    <input id="password" placeholder="Password" type="password">
-    <button onclick="saveMT5()">🔗 Save</button>
-  </div>
-
-  <!-- Risk Form -->
-  <div id="riskBox" class="box">
-    <h3>📊 Risk Settings</h3>
-    <select id="risk_type">
-      <option value="fixed">Fixed Lot</option>
-      <option value="percent">Risk %</option>
-    </select>
-    <input id="risk_value" placeholder="Enter lot or %">
-    <button onclick="saveRisk()">💾 Save Risk</button>
-  </div>
-
+  <div class="container" id="app"></div>
   <script>
-    const userId = Telegram.WebApp.initDataUnsafe.user?.id;
-    const baseUrl = 'https://vessa-mt5-backend-production.up.railway.app';
+    const backend = "https://vessa-mt5-backend-production.up.railway.app";
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-    async function checkStatus() {
-      const res = await fetch(`${baseUrl}/check_mt5_status?user_id=${userId}`);
-      const data = await res.json();
-      if (data.is_valid) {
-        document.getElementById('connectBox').classList.remove('visible');
-        document.getElementById('connectedBox').classList.add('visible');
-        document.getElementById('brokerInfo').innerText = data.broker;
-        document.getElementById('loginInfo').innerText = data.login;
-      } else {
-        document.getElementById('connectBox').classList.add('visible');
+    async function checkStatus(userId) {
+      const res = await fetch(`${backend}/check_mt5_status?user_id=${userId}`);
+      return await res.json();
+    }
+
+    async function waitUntilConnected(userId) {
+      for (let i = 0; i < 10; i++) {
+        const data = await checkStatus(userId);
+        if (data.status === 'connected' && data.is_valid) return true;
+        await delay(3000);
       }
+      return false;
     }
 
-    async function saveMT5() {
-      const broker = document.getElementById('broker').value;
-      const login = document.getElementById('login').value;
-      const password = document.getElementById('password').value;
-      await fetch(`${baseUrl}/save_mt5`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, broker, login, password })
+    function showConnectedUI() {
+      document.body.innerHTML = `
+        <div style='color:white;text-align:center;padding:40px;'>
+          <div style='font-size:60px;'>✅</div>
+          <h2>Account Connected!</h2>
+          <p>You can manage your settings below.</p>
+          <div class='small-btn'>
+            <button onclick='handleDelete()'>🗑️ Delete</button>
+            <button onclick='location.reload()'>🔄 Change</button>
+          </div>
+          <img class='logo' src='Small-Font-With-Logo-White.png' />
+        </div>`;
+    }
+
+    function showForm(userId) {
+      document.getElementById("app").innerHTML = `
+        <img class="top-image" src="VP Smart Signal.png" />
+        <h2>🚀 Setup Your Auto-Copy Account</h2>
+        <form id="mt5Form">
+          <input type="hidden" name="user_id" value="${userId}" />
+          <input type="text" name="broker" placeholder="MT5 Broker Server" required />
+          <input type="text" name="login" placeholder="MT5 Login ID" required />
+          <input type="password" name="password" placeholder="MT5 Password" required />
+          <button type="submit">✅ Save My Account</button>
+        </form>
+
+        <form id="riskForm">
+          <input type="hidden" name="user_id" value="${userId}" />
+          <select name="method" required>
+            <option value="fixed">📏 Fixed Lot</option>
+            <option value="percent">📊 % of Balance</option>
+          </select>
+          <input type="text" name="value" placeholder="Risk Value (e.g. 0.05 or 3%)" required />
+          <button type="submit">⚙️ Save Risk Setting</button>
+        </form>
+
+        <img class="logo" src="Small-Font-With-Logo-White.png" />
+      `;
+      handleForms();
+    }
+
+    function handleForms() {
+      const mt5Form = document.getElementById("mt5Form");
+      const riskForm = document.getElementById("riskForm");
+
+      mt5Form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(mt5Form);
+        document.body.innerHTML = `<div style='color:white;text-align:center;padding:40px;'>
+          <div class='loader'></div>
+          <h2>Saving your account...</h2>
+        </div>`;
+        const res = await fetch(`${backend}/save_mt5`, { method: "POST", body: formData });
+        const result = await res.json();
+        if (result.success) {
+          const connected = await waitUntilConnected(formData.get("user_id"));
+          if (connected) showConnectedUI();
+          else {
+            document.body.innerHTML = `<div style='color:red;text-align:center;padding:40px;'>
+              <div style='font-size:60px;'>⚠️</div>
+              <h2>Account saved but not connected yet.</h2>
+              <p>Check your login or broker details.</p>
+              <button onclick="location.reload()">🔁 Retry</button>
+            </div>`;
+          }
+        } else {
+          alert("❌ Save failed: " + (result?.error || "Unknown error"));
+          location.reload();
+        }
       });
-      await checkStatus();
-    }
 
-    async function saveRisk() {
-      const risk_type = document.getElementById('risk_type').value;
-      const risk_value = document.getElementById('risk_value').value;
-      await fetch(`${baseUrl}/save_risk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, risk_type, risk_value })
+      riskForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(riskForm);
+        const res = await fetch(`${backend}/save_risk`, { method: "POST", body: formData });
+        const result = await res.json();
+        if (result.success) {
+          alert("✅ Risk setting saved!");
+        } else {
+          alert("❌ Risk setting failed: " + (result?.error || "Unknown error"));
+        }
       });
-      Telegram.WebApp.close();
     }
 
-    async function showDeleteForm() {
-      await fetch(`${baseUrl}/delete_mt5?user_id=${userId}`, { method: 'DELETE' });
-      location.reload();
+    async function handleDelete() {
+      const tg = window.Telegram?.WebApp;
+      const userId = tg?.initDataUnsafe?.user?.id;
+      if (!userId) return;
+      const formData = new FormData();
+      formData.append("user_id", userId);
+      const res = await fetch(`${backend}/delete_mt5`, { method: "POST", body: formData });
+      const result = await res.json();
+      if (result.success) location.reload();
+      else alert("❌ Delete failed.");
     }
 
-    function showRiskForm() {
-      document.getElementById('connectedBox').classList.remove('visible');
-      document.getElementById('riskBox').classList.add('visible');
-    }
+    window.addEventListener("DOMContentLoaded", async function () {
+      const tg = window.Telegram?.WebApp;
+      const appDiv = document.getElementById("app");
 
-    checkStatus();
+      if (!tg || !tg.initDataUnsafe?.user?.id) {
+        appDiv.innerHTML = `<div style="color: white; text-align: center; padding: 30px;">
+          <h1 style="font-size: 26px;">❌ Please open this from Telegram.</h1>
+        </div>`;
+        return;
+      }
+
+      tg.ready();
+      tg.expand();
+      const userId = tg.initDataUnsafe.user.id.toString();
+
+      try {
+        const data = await checkStatus(userId);
+        if (data.status === 'connected' && data.is_valid) {
+          showConnectedUI();
+        } else {
+          showForm(userId);
+        }
+      } catch {
+        appDiv.innerHTML = `<p style='color:red;'>⚠️ Failed to check MT5 status.</p>`;
+      }
+    });
   </script>
 </body>
 </html>
