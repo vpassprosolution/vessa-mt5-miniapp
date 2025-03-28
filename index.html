@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VessaPro - MT5 Copy Setup</title>
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script> <!-- ✅ IMPORTANT SCRIPT -->
+
   <style>
     body {
       margin: 0;
@@ -89,83 +91,78 @@
   </div>
 
   <script>
-window.addEventListener("DOMContentLoaded", function () {
-  const tg = window.Telegram?.WebApp;
+    window.addEventListener("DOMContentLoaded", function () {
+      const tg = window.Telegram?.WebApp;
 
-  // ❌ Show error if not inside Telegram
-  if (!tg || !tg.initDataUnsafe?.user?.id) {
-    document.body.innerHTML = `
-      <div style="color: white; text-align: center; padding: 30px;">
-        <h1 style="font-size: 26px;">❌ Please open this form from the Telegram bot.</h1>
-      </div>`;
-    return;
-  }
+      // ❌ Show error if not inside Telegram
+      if (!tg || !tg.initDataUnsafe?.user?.id) {
+        document.body.innerHTML = `
+          <div style="color: white; text-align: center; padding: 30px;">
+            <h1 style="font-size: 26px;">❌ Please open this form from the Telegram bot.</h1>
+          </div>`;
+        return;
+      }
 
-  tg.ready();
-  tg.expand();
+      tg.ready();
+      tg.expand();
 
-  // ✅ Get Telegram user ID
-  const userId = tg.initDataUnsafe.user.id?.toString();
-  if (!userId || userId === "") {
-    alert("❌ Telegram user ID not detected. Please reopen from bot.");
-    return;
-  }
+      // ✅ Get Telegram user ID
+      const userId = tg.initDataUnsafe.user.id?.toString();
+      if (!userId || userId === "") {
+        alert("❌ Telegram user ID not detected. Please reopen from bot.");
+        return;
+      }
 
-  // ✅ Set user ID into both hidden inputs
-  const userInput1 = document.getElementById("user_id");
-  const userInput2 = document.getElementById("user_id_risk");
+      // ✅ Set user ID into both hidden inputs
+      document.getElementById("user_id").value = userId;
+      document.getElementById("user_id_risk").value = userId;
 
-  if (userInput1) userInput1.value = userId;
-  if (userInput2) userInput2.value = userId;
+      // ✅ Forms
+      const mt5Form = document.getElementById("mt5Form");
+      const riskForm = document.getElementById("riskForm");
 
-  // ✅ Forms
-  const mt5Form = document.getElementById("mt5Form");
-  const riskForm = document.getElementById("riskForm");
+      // ✅ Submit MT5 Form
+      mt5Form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(mt5Form);
+        if (!formData.get("user_id")) {
+          alert("❌ MT5 user_id is empty!");
+          return;
+        }
+        const response = await fetch(mt5Form.action, {
+          method: "POST",
+          body: formData,
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert("✅ MT5 details saved!");
+          mt5Form.reset();
+        } else {
+          alert("❌ Failed to save MT5: " + (result.error || ""));
+        }
+      });
 
-  // ✅ Submit MT5 Form
-  mt5Form?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(mt5Form);
-    if (!formData.get("user_id")) {
-      alert("❌ MT5 user_id is empty!");
-      return;
-    }
-
-    const response = await fetch(mt5Form.action, {
-      method: "POST",
-      body: formData,
+      // ✅ Submit Risk Form
+      riskForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(riskForm);
+        if (!formData.get("user_id")) {
+          alert("❌ Risk user_id is empty!");
+          return;
+        }
+        const response = await fetch(riskForm.action, {
+          method: "POST",
+          body: formData,
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert("✅ Risk settings saved!");
+          riskForm.reset();
+        } else {
+          alert("❌ Failed to save risk: " + (result.error || ""));
+        }
+      });
     });
-    const result = await response.json();
-    if (result.success) {
-      alert("✅ MT5 details saved!");
-      mt5Form.reset();
-    } else {
-      alert("❌ Failed to save MT5: " + (result.error || ""));
-    }
-  });
-
-  // ✅ Submit Risk Form
-  riskForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(riskForm);
-    if (!formData.get("user_id")) {
-      alert("❌ Risk user_id is empty!");
-      return;
-    }
-
-    const response = await fetch(riskForm.action, {
-      method: "POST",
-      body: formData,
-    });
-    const result = await response.json();
-    if (result.success) {
-      alert("✅ Risk settings saved!");
-      riskForm.reset();
-    } else {
-      alert("❌ Failed to save risk: " + (result.error || ""));
-    }
-  });
-});
-</script>
+  </script>
+</body>
+</html>
