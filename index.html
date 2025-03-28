@@ -1,78 +1,164 @@
-<script>
-window.addEventListener("DOMContentLoaded", function () {
-  if (!window.Telegram || !window.Telegram.WebApp) {
-    alert("❌ Telegram WebApp not available. Please open from Telegram bot.");
-    return;
-  }
-
-  const tg = window.Telegram.WebApp;
-  tg.ready();        // ✅ Signal Telegram you’re ready
-  tg.expand();       // ✅ Expand WebApp fullscreen
-
-  const userId = tg.initDataUnsafe?.user?.id;
-
-  // 🔒 Disable buttons first
-  const mt5Form = document.getElementById("mt5Form");
-  const riskForm = document.getElementById("riskForm");
-
-  const mt5Button = mt5Form?.querySelector("button");
-  const riskButton = riskForm?.querySelector("button");
-
-  if (mt5Button) mt5Button.disabled = true;
-  if (riskButton) riskButton.disabled = true;
-
-  // ✅ If user ID is found
-  if (userId) {
-    document.getElementById("user_id").value = userId;
-    document.getElementById("user_id_risk").value = userId;
-
-    if (mt5Button) mt5Button.disabled = false;
-    if (riskButton) riskButton.disabled = false;
-  } else {
-    alert("❌ Failed to detect Telegram user ID.");
-    return;
-  }
-
-  // ✅ MT5 Form submit
-  mt5Form?.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const formData = new FormData(mt5Form);
-    try {
-      const response = await fetch(mt5Form.action, {
-        method: "POST",
-        body: formData
-      });
-      const result = await response.json();
-      if (result.success) {
-        alert("✅ MT5 details saved successfully!");
-        mt5Form.reset();
-      } else {
-        alert("❌ Failed to save MT5 details.");
-      }
-    } catch (error) {
-      alert("❌ Network error while saving MT5 details.");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VessaPro - MT5 Copy Setup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Urbanist', sans-serif;
+      background-color: #000000;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
-  });
-
-  // ✅ Risk Form submit
-  riskForm?.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const formData = new FormData(riskForm);
-    try {
-      const response = await fetch(riskForm.action, {
-        method: "POST",
-        body: formData
-      });
-      const result = await response.json();
-      if (result.success) {
-        alert("✅ Risk settings saved successfully!");
-        riskForm.reset();
-      } else {
-        alert("❌ Failed to save risk settings.");
-      }
-    } catch (error) {
-      alert("❌ Network error while saving risk settings.");
+    .container {
+      text-align: center;
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
     }
+    .top-image {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #12b886;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+    button:disabled {
+      background-color: #666;
+      cursor: not-allowed;
+    }
+    button:hover {
+      background-color: #0ca678;
+    }
+    .logo {
+      width: 120px;
+      margin-top: 30px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img class="top-image" src="VP Smart Signal.png" alt="Smart Money Moves" />
+
+    <h2>🚀 Setup Your Auto-Copy Account</h2>
+
+    <!-- ✅ MT5 Form -->
+    <form id="mt5Form" method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_mt5">
+      <input type="hidden" name="user_id" id="user_id" />
+      <input type="text" name="broker" placeholder="MT5 Broker Server" required />
+      <input type="text" name="login" placeholder="MT5 Login ID" required />
+      <input type="password" name="password" placeholder="MT5 Password" required />
+      <button type="submit">✅ Save My Account</button>
+    </form>
+
+    <!-- ✅ Risk Form -->
+    <form id="riskForm" method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_risk">
+      <input type="hidden" name="user_id" id="user_id_risk" />
+      <select name="method" required>
+        <option value="fixed">📏 Fixed Lot</option>
+        <option value="percent">📊 % of Balance</option>
+      </select>
+      <input type="text" name="value" placeholder="Risk Value (e.g. 0.05 or 3%)" required />
+      <button type="submit">⚙️ Save Risk Setting</button>
+    </form>
+
+    <img class="logo" src="Small-Font-With-Logo-White.png" alt="VessaPro Logo" />
+  </div>
+
+  <script>
+  window.addEventListener("DOMContentLoaded", function () {
+    if (!window.Telegram || !window.Telegram.WebApp) {
+      document.body.innerHTML = "<h2 style='color:white;text-align:center;padding:20px;'>❌ Please open this form from the Telegram bot.</h2>";
+      return;
+    }
+
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    const userId = tg.initDataUnsafe?.user?.id;
+
+    const mt5Form = document.getElementById("mt5Form");
+    const riskForm = document.getElementById("riskForm");
+
+    const mt5Button = mt5Form?.querySelector("button");
+    const riskButton = riskForm?.querySelector("button");
+
+    if (userId) {
+      document.getElementById("user_id").value = userId;
+      document.getElementById("user_id_risk").value = userId;
+      if (mt5Button) mt5Button.disabled = false;
+      if (riskButton) riskButton.disabled = false;
+    } else {
+      document.body.innerHTML = "<h2 style='color:white;text-align:center;padding:20px;'>❌ Telegram user not detected. Please try again.</h2>";
+      return;
+    }
+
+    // ✅ MT5 Form Submit
+    mt5Form?.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const formData = new FormData(mt5Form);
+      try {
+        const response = await fetch(mt5Form.action, {
+          method: "POST",
+          body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert("✅ MT5 details saved successfully!");
+          mt5Form.reset();
+        } else {
+          alert("❌ Failed to save MT5 details.");
+        }
+      } catch {
+        alert("❌ Network error while saving MT5 details.");
+      }
+    });
+
+    // ✅ Risk Form Submit
+    riskForm?.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const formData = new FormData(riskForm);
+      try {
+        const response = await fetch(riskForm.action, {
+          method: "POST",
+          body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert("✅ Risk settings saved successfully!");
+          riskForm.reset();
+        } else {
+          alert("❌ Failed to save risk settings.");
+        }
+      } catch {
+        alert("❌ Network error while saving risk settings.");
+      }
+    });
   });
-});
-</script>
+  </script>
+</body>
+</html>
