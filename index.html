@@ -45,6 +45,10 @@
       cursor: pointer;
       transition: background-color 0.2s ease-in-out;
     }
+    button:disabled {
+      background-color: #666;
+      cursor: not-allowed;
+    }
     button:hover {
       background-color: #0ca678;
     }
@@ -61,6 +65,7 @@
 
     <h2>🚀 Setup Your Auto-Copy Account</h2>
 
+    <!-- ✅ MT5 Form -->
     <form id="mt5Form" method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_mt5">
       <input type="hidden" name="user_id" id="user_id" />
       <input type="text" name="broker" placeholder="MT5 Broker Server" required />
@@ -69,6 +74,7 @@
       <button type="submit">✅ Save My Account</button>
     </form>
 
+    <!-- ✅ Risk Form -->
     <form id="riskForm" method="POST" action="https://vessa-mt5-backend-production.up.railway.app/save_risk">
       <input type="hidden" name="user_id" id="user_id_risk" />
       <select name="method" required>
@@ -84,6 +90,9 @@
 
   <script>
     window.addEventListener("DOMContentLoaded", function () {
+      // 🔒 Disable all buttons until user ID is detected
+      document.querySelectorAll("button").forEach(btn => btn.disabled = true);
+
       if (window.Telegram && window.Telegram.WebApp) {
         const tg = window.Telegram.WebApp;
         const userId = tg.initDataUnsafe?.user?.id;
@@ -91,6 +100,9 @@
         if (userId) {
           document.getElementById("user_id").value = userId;
           document.getElementById("user_id_risk").value = userId;
+
+          // ✅ Enable buttons after user ID is inserted
+          document.querySelectorAll("button").forEach(btn => btn.disabled = false);
         } else {
           alert("❌ Failed to detect Telegram user ID. Please open this form from inside Telegram.");
         }
